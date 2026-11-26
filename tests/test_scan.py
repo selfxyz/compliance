@@ -113,11 +113,11 @@ def test_other_lockfiles():
     assert scopes("npm", npm) == {"left-pad": "prod", "typescript": "dev"}
 
 
-def test_curations_from_the_scanned_repo():
-    cur = [{"ecosystem": "npm", "name": "some-gpl-lib", "licence": "MIT", "evidence": "LICENSE file in the tarball", "ships": "yes", "note": "checked"}]
-    d, _ = repo("curated", {"scripts/oss/curations.json": cur}, fixture=True)
-    rc, f, rows = run(d)["packages/sdk"]
-    assert rc == 0 and f["new"] == [] and (rows[0]["licence"], rows[0]["ships"], rows[0]["note"]) == ("MIT", "yes", "checked"), rows
+def test_repo_files_cannot_relabel_a_licence():
+    cur = [{"ecosystem": "npm", "name": "some-gpl-lib", "licence": "MIT", "evidence": "LICENSE file in the tarball"}]
+    d, _ = repo("no-curations", {"scripts/oss/curations.json": cur}, fixture=True)
+    rc, f, _ = run(d)["packages/sdk"]
+    assert rc == 1 and names(f) == [("fail", "gpl", "some-gpl-lib")], f
 
 
 if __name__ == "__main__":

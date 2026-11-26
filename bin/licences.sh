@@ -11,7 +11,6 @@ target=$(cd "$1" && pwd); mkdir -p "$2"; out=$(cd "$2" && pwd)
 
 args=()
 while IFS= read -r line; do args+=("$line"); done < <(python3 -c 'import json, os; print("\n".join(json.loads(os.environ["SCAN_ARGS"])))')
-if [ -f "$target/scripts/oss/curations.json" ]; then args+=(--curations scripts/oss/curations.json); fi
 if [ "${OFFLINE:-}" = true ]; then args+=(--offline); fi
 scan() { (cd "$target" && python3 "$ROOT/scanner/scan.py" "$1" "${args[@]}" --out "$out/$2" --csv "$out/$2/deps.csv"); }
 

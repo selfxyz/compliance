@@ -9,13 +9,13 @@ import policy
 from licences import classify
 
 POLICY = policy.load_yaml(os.path.join(ROOT, "policy", "policy.yml"))
-COLS = ["ecosystem", "name", "version", "licence", "licence_source", "scope", "direct", "category", "ships", "note"]
+COLS = ["ecosystem", "name", "version", "licence", "licence_source", "scope", "direct", "category"]
 
 
 def findings(licence, profile, scope="prod", name="x"):
     path = os.path.join(TMP, "deps.csv")
     with open(path, "w", newline="") as f:
-        csv.writer(f).writerows([COLS, ["npm", name, "1", licence, "", scope, "", classify(licence), "", ""]])
+        csv.writer(f).writerows([COLS, ["npm", name, "1", licence, "", scope, "", classify(licence)]])
     return policy.dep_findings(path, POLICY["rules"], profile)
 
 

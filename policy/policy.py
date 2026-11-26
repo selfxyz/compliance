@@ -53,8 +53,7 @@ def dep_findings(csv_path, rules, profile):
                 if act != "pass":
                     out.append(dict(kind="dependency", rule=rule["id"], action=act,
                                     ecosystem=row["ecosystem"], name=row["name"], version=row["version"],
-                                    licence=lic or "(none)", scope=scope, ships=row.get("ships", ""),
-                                    note=row.get("note", ""), why=rule.get("why", "")))
+                                    licence=lic or "(none)", scope=scope, why=rule.get("why", "")))
                 break
     return out
 

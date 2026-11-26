@@ -73,6 +73,14 @@ def test_repo_level_exceptions_validate():
     assert plan(d)[0] == 2
 
 
+def test_curations_are_not_a_config_field():
+    d, _ = repo("curations", fixture=True)
+    c = fixture_config(d)
+    c["curations"] = [{"name": "ring", "licence": "MIT", "evidence": "LICENSE file in the crate tarball"}]
+    commit(d, {".github/compliance.json": c})
+    assert plan(d)[0] == 2
+
+
 def test_summary_lists_everything_a_repo_switched_off():
     d, _ = repo("summary", fixture=True)
     c = fixture_config(d)

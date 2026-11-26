@@ -83,7 +83,8 @@ Reasons are required, 20 characters or more. The job summary lists every overrid
 | `workspace path ... does not exist at this commit` | Fix the `path`; it is relative to the repo root. |
 | A schema error such as `Additional properties are not allowed` | Compare with `schema/compliance.schema.json`. |
 | "Not covered by the scanner" in the summary | That lockfile type is not read (Python, Go, `bun.lockb`, a Rust crate without `Cargo.lock`). Commit a supported lockfile if there is one. |
-| A wrong or missing licence on a package | Add the correct one to `scripts/oss/curations.json` in the repo, with the evidence. |
+| A package flagged "no licence found" | The registry states no licence. Check the package's own LICENSE file; the flag stays, and it does not block. |
+| A package wrongly reported with a banned licence | Add an `exceptions` entry with the reason. |
 | `Possible secret committed` | Rotate the secret first. Then remove it, or allowlist a false positive in `.gitleaks.toml`. |
 | `Dependabot alerts are off` | Turn them on: Settings, Advanced Security, Dependabot alerts. |
 | `could not read Dependabot alerts` | The caller workflow is missing `vulnerability-alerts: read`. Copy the template again. |
