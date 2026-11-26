@@ -1,0 +1,23 @@
+# Exceptions that apply to more than one repo. Changes need approval from .github/CODEOWNERS.
+# An exception for one repo belongs in that repo: `exceptions` in its .github/compliance.json.
+# Both kinds are listed in the job summary. An expired entry stops applying.
+#
+#   id          short unique id, shown in the summary
+#   repos       repo globs (default: every repo)
+#   package     package name or file path, glob
+#   licence     optional regex on the licence string
+#   rule        optional policy rule id (agpl, gpl, lgpl, fonts, licence_file, ...)
+#   reason      why it is acceptable
+#   approved_by who approved it
+#   approved_on YYYY-MM-DD
+#   expires     optional YYYY-MM-DD
+
+exceptions: []
+# - id: example
+#   repos: [my-org/some-repo]
+#   package: "some-package"
+#   rule: gpl
+#   reason: "Why this is acceptable."
+#   approved_by: Name
+#   approved_on: 2026-12-01
+#   expires: 2027-06-01

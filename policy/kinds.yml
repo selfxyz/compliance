@@ -1,0 +1,41 @@
+# What each workspace kind means. Repos say what a folder IS (kind); this file decides which
+# licence rules (profile in policy.yml) apply.
+#
+# evidence: files that prove a folder is (at least) this kind. If a folder is declared as a
+# less strict kind but contains evidence of a stricter one, the plan fails with a mismatch,
+# unless the workspace has an `override` with a reason. Kinds with the `excluded` profile
+# (tooling, example, test-app) are not scanned and not cross-checked; the job summary lists them.
+
+strictness: [distributed, web, contracts, backend, excluded]   # most strict first
+
+kinds:
+  ios-app:      { profile: distributed, evidence: ['Podfile.lock', '*.xcodeproj/project.pbxproj'] }
+  android-app:  { profile: distributed, evidence: ['AndroidManifest.xml'] }
+  native-sdk:   { profile: distributed, evidence: ['*.podspec', '*.xcframework/Info.plist', '*.aar'] }
+  rn-module:    { profile: distributed, evidence: [] }
+  npm-package:  { profile: distributed, evidence: [publishable-package-json] }
+  web-app:      { profile: web,         evidence: [] }
+  docs:         { profile: web,         evidence: [] }
+  contracts:    { profile: contracts,   evidence: ['foundry.toml', 'hardhat.config.*'] }
+  service:      { profile: backend,     evidence: [] }
+  circuits:     { profile: backend,     evidence: [] }
+  infra:        { profile: backend,     evidence: [] }
+  tooling:      { profile: excluded,    evidence: [] }
+  example:      { profile: excluded,    evidence: [] }
+  test-app:     { profile: excluded,    evidence: [] }
+
+# Used when a repo has no .github/compliance.json: folders found by these markers become
+# workspaces of these kinds, in report mode, and the plan marks the repo as unconfigured.
+# The same markers define "a dependency manifest": in a configured repo, one that no workspace
+# covers fails the plan.
+detect:
+  - { marker: 'Podfile.lock',            kind: ios-app }
+  - { marker: 'settings.gradle',         kind: android-app }
+  - { marker: 'settings.gradle.kts',     kind: android-app }
+  - { marker: 'foundry.toml',            kind: contracts }
+  - { marker: 'hardhat.config.*',        kind: contracts }
+  - { marker: 'publishable-package-json', kind: npm-package }
+  - { marker: 'Cargo.toml',              kind: service }
+  - { marker: 'go.mod',                  kind: service }
+  - { marker: 'pyproject.toml',          kind: service }
+  - { marker: 'package.json',            kind: web-app, fallback: true }

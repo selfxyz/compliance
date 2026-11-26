@@ -1,0 +1,109 @@
+# Licence policy, applied by policy.py.
+#
+# Each dependency row from the scanner is checked against the rules in order; the first
+# rule that matches decides. `action` is either one value for every profile, or a map
+# per profile with an optional `default`.
+#   fail = violation; blocks the PR once the repo is in block mode
+#   flag = needs a person to look (trace whether it ships, or add an exception)
+#   pass = allowed
+# `licence` is a case-insensitive regex on the licence string; `category` is the scanner's
+# category (ok, dual, weak, strong, restricted, unknown, non-standard, first-party);
+# `scope` is prod or dev.
+
+profiles: [distributed, web, backend, contracts]
+
+rules:
+  - id: first-party
+    category: first-party
+    action: pass
+    why: Our own packages. Their outbound licence is checked by the LICENSE file check.
+
+  - id: dev-only
+    scope: dev
+    action: pass
+    why: "Dev and build tools that never ship or run in production."
+
+  - id: dual-permissive
+    category: dual
+    action: pass
+    why: "An explicit OR with a permissive option; we use the permissive one."
+
+  - id: agpl
+    licence: '\bAGPL|Affero'
+    action: fail
+    why: "AGPL is banned everywhere in production."
+
+  - id: gpl
+    licence: '(^|[^AL])GPL|(?<!Lesser )(?<!Library )(?<!Affero )General Public Licen[sc]e'
+    action: {distributed: fail, web: flag, contracts: flag, backend: pass}
+    why: >-
+      GPL is banned in anything distributed and allowed on our own servers.
+      Web apps are flagged because the scanner cannot tell browser code from server code.
+      Deployed contracts are flagged for review.
+
+  - id: lgpl
+    licence: 'LGPL|Lesser|Library General Public'
+    action: {distributed: flag, default: pass}
+    why: "LGPL with static linking (iOS, merged Android dex) needs review."
+
+  - id: sspl
+    licence: 'SSPL'
+    action: flag
+    why: "Source-available: use is restricted for hosted services."
+
+  - id: busl
+    licence: 'BUSL|Business Source'
+    action: flag
+    why: "Third-party BUSL. First-party code passes above."
+
+  - id: commons-clause
+    licence: 'Commons[ -]Clause'
+    action: flag
+    why: "Commons Clause restricts selling the software."
+
+  - id: fsl
+    licence: 'FSL-'
+    action: flag
+    why: "Source-available, like BUSL."
+
+  - id: lzbl
+    licence: 'LZBL'
+    action: flag
+    why: "LayerZero licence that ends up compiled into contracts."
+
+  - id: unlicensed
+    licence: 'UNLICENSED|SEE LICEN|proprietary'
+    action: flag
+    why: "No licence grant means all rights reserved."
+
+  - id: no-licence
+    category: unknown
+    action: flag
+    why: "No licence found by the scanner."
+
+  - id: restricted
+    category: restricted
+    action: flag
+    why: "Source-available or custom terms the rules above did not name."
+
+  - id: non-standard
+    category: non-standard
+    action: flag
+    why: "Licence string is not a recognised SPDX id; check the actual text."
+
+# Weak copyleft other than LGPL (MPL, EPL, CDDL) passes.
+
+# File checks: these look at the repo's own files.
+files:
+  fonts:
+    glob: ['*.otf', '*.ttf', '*.woff', '*.woff2']
+    action: flag
+    why: Fonts are often commercial; check each one is licensed for embedding and for this repo.
+  binaries:
+    glob: ['*.jar', '*.aar', '*.so', '*.dylib', '*.a', '*.dll', '*.exe']
+    action: flag
+    why: Vendored binaries carry their own licences and are invisible to the dependency scan.
+  licence_file:
+    action: {public: fail, private: flag}
+    why: A public repo without a LICENSE file is all rights reserved, which contradicts publishing it.
+  ignore_paths: ['node_modules/*', '*/node_modules/*', '.git/*']
