@@ -73,6 +73,19 @@ def test_repo_level_exceptions_validate():
     assert plan(d)[0] == 2
 
 
+def test_curations_validate():
+    d, _ = repo("curations", fixture=True)
+    c = fixture_config(d)
+    c["curations"] = [{"name": "ring", "ecosystem": "cargo", "licence": "ISC AND MIT AND OpenSSL", "evidence": "LICENSE file in the crates.io tarball"},
+                      {"name": "snarkjs", "ships": "no", "note": "only loaded by the proving script"}]
+    commit(d, {".github/compliance.json": c})
+    rc, p, _ = plan(d)
+    assert rc == 0 and p["curations"] == 2
+    c["curations"] = [{"name": "ring", "licence": "MIT"}]   # a licence without evidence
+    commit(d, {".github/compliance.json": c})
+    assert plan(d)[0] == 2
+
+
 def test_summary_lists_everything_a_repo_switched_off():
     d, _ = repo("summary", fixture=True)
     c = fixture_config(d)

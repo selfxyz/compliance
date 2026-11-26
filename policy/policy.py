@@ -7,6 +7,7 @@ Usage:
             [--base base/deps.csv --base-ref SHA] [--config DIR/.github/compliance.json] \
             --out findings.json --summary summary.md
 
+Licences a repo set by hand (`curations` in its compliance.json) are applied by the scanner and listed here.
 Exceptions come from two places, checked in this order:
   1. exceptions.yml in selfxyz/compliance (org-wide, reviewed by its CODEOWNERS)
   2. `exceptions` in the scanned repo's .github/compliance.json (repo-level, reviewed in that repo)
@@ -78,6 +79,13 @@ def file_findings(checkout, ref, files_cfg, visibility):
     return out
 
 
+def curated(csv_path):
+    """Dependencies whose licence was set by a curation in the repo's compliance.json."""
+    with open(csv_path, newline="") as f:
+        return [dict(name=r["name"], version=r["version"], licence=r["licence"], evidence=r["licence_source"].split("curation: ", 1)[1])
+                for r in csv.DictReader(f) if "curation: " in r["licence_source"]]
+
+
 def key(f):
     return (f["kind"], f["rule"], f.get("ecosystem", ""), f["name"], f.get("licence", ""))
 
@@ -102,7 +110,7 @@ def apply_exceptions(findings, exceptions, repo, today):
     return findings
 
 
-def summary_md(a, new, existing, excepted, blocking):
+def summary_md(a, new, existing, excepted, blocking, cur):
     L = [f"## Licence and file checks: `{a.repo}`" + (f" / `{a.workspace}`" if a.workspace else ""), "",
          f"Profile **{a.profile}**, {a.visibility} repo, mode **{a.mode}**.", ""]
     counts = lambda fs, act: sum(1 for f in fs if f["action"] == act)
@@ -130,6 +138,9 @@ def summary_md(a, new, existing, excepted, blocking):
     if excepted:
         L += ["### Covered by exceptions", "", "| Package / file | Rule | Exception | Reason |", "|---|---|---|---|"]
         L += [f"| `{f['name']}` | {f['rule']} | `{f['excepted']}` | {f['exception_reason']} |" for f in excepted[:30]] + [""]
+    if cur:
+        L += ["### Licences set by this repo's curations", "", "| Package | Licence used | Evidence |", "|---|---|---|"]
+        L += [f"| `{c['name']} {c['version']}` | {c['licence']} | {c['evidence']} |" for c in cur[:30]] + [""]
     return "\n".join(L)
 
 
@@ -162,13 +173,14 @@ def main():
     new = [f for f in live if key(f) not in base_keys]
     existing = [f for f in live if f not in new]
     blocking = a.mode == "block" and any(f["action"] == "fail" for f in new)
+    cur = curated(a.head)
 
     result = dict(repo=a.repo, workspace=a.workspace, profile=a.profile, mode=a.mode, generated=today, pr=bool(a.base),
-                  blocking=blocking, new=new, existing=existing, excepted=excepted)
+                  blocking=blocking, new=new, existing=existing, excepted=excepted, curated=cur)
     if a.out:
         with open(a.out, "w") as f:
             json.dump(result, f, indent=1)
-    md = summary_md(a, new, existing, excepted, blocking)
+    md = summary_md(a, new, existing, excepted, blocking, cur)
     if a.summary:
         with open(a.summary, "w") as f:
             f.write(md)

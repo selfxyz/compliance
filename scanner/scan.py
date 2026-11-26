@@ -32,7 +32,7 @@ FLAGS = {  # all take comma-separated repo paths unless noted
     "solidity": "folders of .sol sources",
     "circom": "folders of .circom sources",
     "first-party": "name prefixes never sent to outside services",
-    "curations": "JSON file of hand-established licences and ships / note answers",
+    "config": "the repo's .github/compliance.json; its `curations` (licences and ships / note answers set by hand) are applied",
     "out": "output folder",
     "csv": "CSV file to write",
 }
@@ -42,18 +42,15 @@ COLUMNS = ["ecosystem", "name", "version", "licence", "licence_source", "scope",
 def curate(rows, a):
     """Apply the repo's curations (first match wins) and set each row's category."""
     curs = []
-    if a.curations and os.path.exists(a.curations):
-        with open(a.curations) as f:
-            curs = json.load(f)
-    part = "all" if a.path in ("", ".") else os.path.basename(a.path)
+    if a.config and os.path.exists(a.config):
+        with open(a.config) as f:
+            curs = json.load(f).get("curations") or []
     for r in rows:
         r["ships"], r["note"] = "", ""
         for c in curs:
             if c.get("ecosystem") not in (None, r["eco"]) or not fnmatch.fnmatchcase(r["name"], c["name"]):
                 continue
             if c.get("version") and not fnmatch.fnmatchcase(r["version"], c["version"]):
-                continue
-            if c.get("part") and c["part"] != part:
                 continue
             if "if_licence" in c and not re.search(c["if_licence"], r["licence"]):
                 continue
