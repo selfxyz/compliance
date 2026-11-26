@@ -1,0 +1,14 @@
+# Python plus this repo's scripts, for the jobs of the reusable workflow.
+# GitHub downloads the whole repo to run an action from it, so the scripts are on disk.
+# Sets COMPLIANCE_ROOT to the repo root.
+name: Compliance setup
+description: Set up Python and point COMPLIANCE_ROOT at the compliance scripts.
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+      with: { python-version: "3.12" }
+    - shell: bash
+      run: |
+        pip install --quiet pyyaml==6.0.2 jsonschema==4.23.0
+        echo "COMPLIANCE_ROOT=$(cd "$GITHUB_ACTION_PATH/../../.." && pwd)" >> "$GITHUB_ENV"

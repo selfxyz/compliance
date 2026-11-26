@@ -1,0 +1,5 @@
+{
+  "$comment": "Circuit library published to npm. Both kinds apply; the stricter rules win.",
+  "version": 1,
+  "kind": ["circuits", "npm-package"]
+}

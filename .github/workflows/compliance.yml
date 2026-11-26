@@ -1,0 +1,170 @@
+# Reusable workflow. Repos call it with the file in template/.
+#
+#   plan      read or detect the repo's workspaces, pick the ones to scan
+#   licences  one job per workspace (changed ones on PRs and pushes, all on weekly / manual runs)
+#   secrets   gitleaks on new commits (whole history on weekly / manual runs)
+#   settings  Dependabot alerts are on; the default branch needs a pull request, approvals, no force push
+#   gate      the required check: "compliance / gate"
+#
+# The gate fails on a plan error in any mode, and on findings only in block mode.
+# Releasing: callers use @v1, and so do the `uses: selfxyz/compliance/...@v1` lines below.
+
+name: compliance
+
+on:
+  workflow_call:
+    inputs:
+      full:
+        description: Scan every workspace, ignoring what changed
+        type: boolean
+        default: false
+
+env:
+  GITLEAKS_VERSION: 8.18.4
+  GITLEAKS_SHA256: ba6dbb656933921c775ee5a2d1c13a91046e7952e9d919f9bac4cec61d628e7d   # gitleaks_8.18.4_linux_x64.tar.gz
+  HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+  BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+  FULL: ${{ inputs.full || github.event_name == 'schedule' }}
+
+permissions: {}
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix || '[]' }}
+      any: ${{ steps.plan.outputs.any || 'false' }}
+      mode: ${{ steps.plan.outputs.mode || 'report' }}
+      branch_rules: ${{ steps.plan.outputs.branch_rules || '{}' }}
+      visibility: ${{ steps.vis.outputs.visibility }}
+      default_branch: ${{ steps.vis.outputs.default_branch }}
+    steps:
+      - id: vis
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: gh api "repos/$REPO" --jq '"visibility=\(.visibility)\ndefault_branch=\(.default_branch)"' >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with: { fetch-depth: 0, persist-credentials: false }
+      - uses: selfxyz/compliance/.github/actions/setup@v1
+      - id: plan
+        run: |
+          git checkout --quiet --detach "$HEAD"   # the commit that gets scanned, not the PR merge commit
+          args=(--repo . --head "$HEAD" --out "$RUNNER_TEMP/plan.json")
+          if [ "$FULL" = true ]; then args+=(--full); else args+=(--base "$BASE"); fi
+          python3 "$COMPLIANCE_ROOT/bin/plan.py" "${args[@]}"
+
+  licences:
+    name: licences (${{ matrix.ws.name }})
+    needs: plan
+    if: needs.plan.outputs.any == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        ws: ${{ fromJSON(needs.plan.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with: { fetch-depth: 0, persist-credentials: false }
+      - uses: selfxyz/compliance/.github/actions/setup@v1
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:   # licence lookups, so most runs make few requests
+          path: ~/.cache/oss-scan
+          key: oss-scan-${{ github.repository }}-${{ github.run_id }}-${{ strategy.job-index }}
+          restore-keys: oss-scan-${{ github.repository }}-
+      - name: Scan and apply policy
+        env:
+          SCAN_ARGS: ${{ toJSON(matrix.ws.scan_args) }}
+          GH_TOKEN: ${{ github.token }}   # GitHub licence lookups for Swift packages and submodules
+          REPO: ${{ github.repository }}
+          WORKSPACE: ${{ matrix.ws.path }}
+          PROFILE: ${{ matrix.ws.profile }}
+          VISIBILITY: ${{ needs.plan.outputs.visibility }}
+          MODE: ${{ needs.plan.outputs.mode }}
+          FILE_CHECKS: ${{ matrix.ws.file_checks }}
+        run: |
+          git checkout --quiet --detach "$HEAD"
+          bash "$COMPLIANCE_ROOT/bin/licences.sh" . "$RUNNER_TEMP/scan"
+      - if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:   # findings.json, deps.csv and the SBOM: the record of this run
+          name: compliance-licences-${{ matrix.ws.slug }}
+          path: ${{ runner.temp }}/scan/
+          retention-days: 90
+
+  secrets:
+    needs: plan
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with: { fetch-depth: 0, persist-credentials: false }
+      - name: gitleaks
+        env:
+          MODE: ${{ needs.plan.outputs.mode }}
+        run: |
+          file="gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          curl -fsSL -o "$RUNNER_TEMP/$file" "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/$file"
+          echo "$GITLEAKS_SHA256  $RUNNER_TEMP/$file" | sha256sum --check --quiet
+          tar -xzf "$RUNNER_TEMP/$file" -C "$RUNNER_TEMP" gitleaks
+          range=()   # no usable base (first push, force push, weekly, manual): whole history
+          if [ "$FULL" != true ] && [ -n "$BASE" ] && git cat-file -e "$BASE^{commit}" 2>/dev/null; then
+            range=(--log-opts "$BASE..$HEAD")
+          fi
+          rc=0
+          "$RUNNER_TEMP/gitleaks" detect --source . "${range[@]}" --redact --no-banner --exit-code 2 || rc=$?
+          if [ $rc -eq 2 ]; then
+            echo "::error title=Possible secret committed::rotate it first, then remove it or allowlist it in .gitleaks.toml"
+            if [ "$MODE" = block ]; then exit 1; fi
+          fi
+          [ $rc -eq 0 ] || [ $rc -eq 2 ]   # 1 means gitleaks itself failed
+
+  settings:
+    needs: plan
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      vulnerability-alerts: read   # listing Dependabot alerts only works when they are on
+    steps:
+      - uses: selfxyz/compliance/.github/actions/setup@v1
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          DEFAULT_BRANCH: ${{ needs.plan.outputs.default_branch }}
+          RULES: ${{ needs.plan.outputs.branch_rules }}
+          MODE: ${{ needs.plan.outputs.mode }}
+        run: python3 "$COMPLIANCE_ROOT/bin/settings.py"
+
+  gate:
+    name: gate
+    needs: [plan, licences, secrets, settings]
+    if: always()
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      - env:
+          NEEDS: ${{ toJSON(needs) }}
+          MODE: ${{ needs.plan.outputs.mode }}
+        run: |
+          python3 - <<'EOF'
+          import json, os, sys
+          needs, mode = json.loads(os.environ["NEEDS"]), os.environ["MODE"]
+          bad = []
+          for job, n in needs.items():
+              print(f"{job:10} {n['result']}")
+              if n["result"] not in ("failure", "cancelled"):
+                  continue
+              # Report mode never blocks on a check. A broken plan or a cancelled run always does.
+              if mode == "report" and job != "plan" and n["result"] == "failure":
+                  print(f"::warning title=Compliance (report mode)::{job} failed; see its log. Not blocking in report mode.")
+              else:
+                  bad.append(job)
+          if bad:
+              print(f"::error title=Compliance gate::failed: {', '.join(bad)}")
+              sys.exit(1)
+          EOF

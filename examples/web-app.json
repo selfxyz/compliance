@@ -1,0 +1,5 @@
+{
+  "$comment": "Hosted web app. The whole repo is one workspace.",
+  "version": 1,
+  "kind": "web-app"
+}

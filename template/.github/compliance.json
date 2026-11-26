@@ -1,0 +1,5 @@
+{
+  "$comment": "Describe what this repo IS; selfxyz/compliance decides the rules. Fields and kinds: README of selfxyz/compliance. More shapes: its examples/ folder.",
+  "version": 1,
+  "kind": "service"
+}

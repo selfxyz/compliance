@@ -1,0 +1,9 @@
+{
+  "$comment": "React Native native module shipped inside apps and SDKs. The debug app and dev tools never ship.",
+  "version": 1,
+  "workspaces": [
+    { "path": ".", "kind": "rn-module" },
+    { "path": "example-app", "kind": "test-app" },
+    { "path": "tools", "kind": "tooling" }
+  ]
+}

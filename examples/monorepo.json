@@ -1,0 +1,21 @@
+{
+  "$comment": "pnpm monorepo: React Native app, web app, published SDK, Rust service, contracts. Shows every repo-level override.",
+  "version": 1,
+  "mode": "report",
+  "workspaces": [
+    { "path": "apps/mobile",  "kind": ["ios-app", "android-app"] },
+    { "path": "apps/web",     "kind": "web-app" },
+    { "path": "packages/sdk", "kind": "npm-package" },
+    { "path": "services/api", "kind": "service" },
+    { "path": "contracts",    "kind": "contracts" },
+    { "path": "examples",     "kind": "example" },
+    { "path": "packages/internal-ui", "kind": "web-app",
+      "override": { "profile": "backend", "reason": "Admin panel behind the VPN, never served to users." } }
+  ],
+  "ignore": ["**/fixtures/**"],
+  "branch_rules": { "protected": ["main", "staging"], "approvals": 2 },
+  "exceptions": [
+    { "id": "snarkjs", "package": "snarkjs", "rule": "gpl",
+      "reason": "Used by the proving script only; not bundled in the SDK. Reviewed 2026-11-26.", "expires": "2027-06-01" }
+  ]
+}

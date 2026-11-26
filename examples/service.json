@@ -1,0 +1,5 @@
+{
+  "$comment": "Backend service. A sidecar that runs in the same image (a Node helper next to a Rust server) is part of the service, not tooling.",
+  "version": 1,
+  "kind": "service"
+}

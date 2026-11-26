@@ -1,0 +1,6 @@
+{
+  "$comment": "Foundry contracts repo. Scripts and tests are left out of every check.",
+  "version": 1,
+  "kind": "contracts",
+  "ignore": ["script/**", "test/**"]
+}
