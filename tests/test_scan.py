@@ -113,22 +113,9 @@ def test_other_lockfiles():
     assert scopes("npm", npm) == {"left-pad": "prod", "typescript": "dev"}
 
 
-def test_curations_from_the_repo_config():
-    d, _ = repo("curated", fixture=True)
-    c = fixture_config(d)
-    c["curations"] = [{"ecosystem": "npm", "name": "some-gpl-lib", "licence": "MIT", "evidence": "LICENSE file in the 1.0.0 tarball",
-                       "ships": "yes", "note": "checked"}]
-    commit(d, {".github/compliance.json": c})
-    rc, f, rows = run(d)["packages/sdk"]
-    assert rc == 0 and f["new"] == [] and (rows[0]["licence"], rows[0]["ships"], rows[0]["note"]) == ("MIT", "yes", "checked"), rows
-    assert f["curated"] == [{"name": "some-gpl-lib", "version": "1.0.0", "licence": "MIT", "evidence": "LICENSE file in the 1.0.0 tarball"}], f["curated"]
-    summary = open(os.path.join(d, ".scan", "packages-sdk", "summary.md")).read()
-    assert "Licences set by this repo's curations" in summary and "LICENSE file in the 1.0.0 tarball" in summary, summary
-
-
-def test_old_curations_file_is_not_read():
+def test_repo_files_cannot_relabel_a_licence():
     cur = [{"ecosystem": "npm", "name": "some-gpl-lib", "licence": "MIT", "evidence": "LICENSE file in the tarball"}]
-    d, _ = repo("old-curations", {"scripts/oss/curations.json": cur}, fixture=True)
+    d, _ = repo("no-curations", {"scripts/oss/curations.json": cur}, fixture=True)
     rc, f, _ = run(d)["packages/sdk"]
     assert rc == 1 and names(f) == [("fail", "gpl", "some-gpl-lib")], f
 

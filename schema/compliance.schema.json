@@ -66,26 +66,6 @@
         }
       },
       "then": { "required": ["reason"] }
-    },
-    "curations": {
-      "type": "array",
-      "description": "What was established by hand about a dependency: its real licence, or whether it ships. The first matching entry wins. Listed in the job summary.",
-      "items": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": ["name"],
-        "properties": {
-          "name": { "type": "string", "description": "Package name, glob." },
-          "ecosystem": { "enum": ["npm", "cargo", "maven", "cocoapods", "swiftpm", "gradle-project", "solidity-source", "circom-include", "git-submodule"] },
-          "version": { "type": "string", "description": "Version, glob." },
-          "if_licence": { "type": "string", "description": "Apply only when the scanned licence matches this regex." },
-          "licence": { "type": "string", "description": "The licence to use instead of the scanned one. Needs evidence." },
-          "evidence": { "type": "string", "minLength": 20, "description": "Where the licence was read." },
-          "ships": { "enum": ["yes", "no"] },
-          "note": { "type": "string" }
-        },
-        "dependentRequired": { "licence": ["evidence"] }
-      }
     }
   },
   "oneOf": [

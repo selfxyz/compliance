@@ -71,9 +71,8 @@ Optional. Add `.github/compliance.json` to correct a detected kind, leave a fold
 | `override` (in a workspace) | `{ "profile": "backend", "reason": "..." }` | Other rules for that folder, or `excluded`. |
 | `ignore` | `["**/fixtures/**"]` | Paths left out of every check. |
 | `exceptions` | `[{ "package": "snarkjs", "rule": "gpl", "reason": "...", "expires": "2027-06-01" }]` | Accept one finding. |
-| `curations` | `[{ "name": "ring", "licence": "ISC AND MIT AND OpenSSL", "evidence": "LICENSE file in the crate" }]` | Set a licence the scanner got wrong or could not find. Also `ships` and `note`. |
 
-Reasons are required, 20 characters or more. The job summary lists every override, ignore, exception and curation. `examples/monorepo.json` uses all of them.
+Reasons are required, 20 characters or more. The job summary lists every override, ignore and exception. `examples/monorepo.json` uses all of them.
 
 ## Troubleshooting
 
@@ -84,7 +83,8 @@ Reasons are required, 20 characters or more. The job summary lists every overrid
 | `workspace path ... does not exist at this commit` | Fix the `path`; it is relative to the repo root. |
 | A schema error such as `Additional properties are not allowed` | Compare with `schema/compliance.schema.json`. |
 | "Not covered by the scanner" in the summary | That lockfile type is not read (Python, Go, `bun.lockb`, a Rust crate without `Cargo.lock`). Commit a supported lockfile if there is one. |
-| A wrong or missing licence on a package | Add a `curations` entry with the correct licence and the evidence. |
+| A package flagged "no licence found" | The registry states no licence. Check the package's own LICENSE file; the flag stays, and it does not block. |
+| A package wrongly reported with a banned licence | Add an `exceptions` entry with the reason. |
 | `Possible secret committed` | Rotate the secret first. Then remove it, or allowlist a false positive in `.gitleaks.toml`. |
 | `Dependabot alerts are off` | Turn them on: Settings, Advanced Security, Dependabot alerts. |
 | `could not read Dependabot alerts` | The caller workflow is missing `vulnerability-alerts: read`. Copy the template again. |

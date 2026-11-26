@@ -79,8 +79,6 @@ def summary_md(p):
         L += ["", "### Ignored paths", ""] + [f"- `{g}`" for g in p["ignore"]]
     if p["exceptions"]:
         L += ["", f"### Repo-level exceptions: {p['exceptions']}", "", "Listed with their reasons in each licence job that uses one."]
-    if p["curations"]:
-        L += ["", f"### Repo-level curations: {p['curations']}", "", "Each licence job lists the licences they set, with the evidence."]
     if p["warnings"]:
         L += ["", "### Not covered by the scanner", ""] + [f"- `{w['path']}`: {w['message']}" for w in p["warnings"]]
     return "\n".join(L) + "\n"
@@ -135,8 +133,7 @@ def main():
             "matrix": matrix,
             "overrides": [{"path": w["path"], **w["override"]} for w in workspaces if w.get("override")],
             "excluded": [{"path": w["path"], "kinds": w["kinds"]} for w in workspaces if w["profile"] == "excluded" and not w.get("override")],
-            "ignore": ignore, "exceptions": len(cfg.get("exceptions", [])),
-            "curations": len(cfg.get("curations", [])), "warnings": warnings,
+            "ignore": ignore, "exceptions": len(cfg.get("exceptions", [])), "warnings": warnings,
             "branch_rules": cfg.get("branch_rules", {})}
     with open(a.out, "w") as f:
         json.dump(plan, f, indent=1)

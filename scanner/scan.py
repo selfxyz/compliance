@@ -6,7 +6,7 @@ Usage: scan.py REF --path DIR [lockfile flags] --out DIR --csv FILE [--offline]
 Reads every file at REF with git. Writes <out>/sbom.spdx.json and the CSV that policy/policy.py
 reads. It lists licences; it never decides pass or fail. bin/scanargs.py builds the lockfile flags.
 """
-import argparse, csv, fnmatch, json, os, re, subprocess, sys
+import argparse, csv, os, re, subprocess, sys
 
 from apple import pod_rows, podspec_rows, swift_rows
 from gradle import gradle_rows
@@ -32,34 +32,10 @@ FLAGS = {  # all take comma-separated repo paths unless noted
     "solidity": "folders of .sol sources",
     "circom": "folders of .circom sources",
     "first-party": "name prefixes never sent to outside services",
-    "config": "the repo's .github/compliance.json; its `curations` (licences and ships / note answers set by hand) are applied",
     "out": "output folder",
     "csv": "CSV file to write",
 }
-COLUMNS = ["ecosystem", "name", "version", "licence", "licence_source", "scope", "direct", "category", "ships", "note"]
-
-
-def curate(rows, a):
-    """Apply the repo's curations (first match wins) and set each row's category."""
-    curs = []
-    if a.config and os.path.exists(a.config):
-        with open(a.config) as f:
-            curs = json.load(f).get("curations") or []
-    for r in rows:
-        r["ships"], r["note"] = "", ""
-        for c in curs:
-            if c.get("ecosystem") not in (None, r["eco"]) or not fnmatch.fnmatchcase(r["name"], c["name"]):
-                continue
-            if c.get("version") and not fnmatch.fnmatchcase(r["version"], c["version"]):
-                continue
-            if "if_licence" in c and not re.search(c["if_licence"], r["licence"]):
-                continue
-            if c.get("licence"):
-                r["licence"] = c["licence"]
-                r["source"] = ("first-party; " if r["source"].startswith("first-party") else "") + "curation: " + c.get("evidence", "")
-            r["ships"], r["note"] = c.get("ships", ""), c.get("note", "")
-            break
-        r["cat"] = "first-party" if r["source"].startswith("first-party") else classify(r["licence"])
+COLUMNS = ["ecosystem", "name", "version", "licence", "licence_source", "scope", "direct", "category"]
 
 
 def main():
@@ -85,13 +61,14 @@ def main():
     rows = (nrows + npmlock_rows(a, lk, fps) + yarnlock_rows(a, lk, fps) + bunlock_rows(a, lk, fps)
             + pod_rows(a, npm_lic, lk, fps) + podspec_rows(a, lk, fps) + gradle_rows(a, lk, npm_lic, fps) + swift_rows(a, lk, fps)
             + cargo_rows(a, lk, fps) + solidity_rows(a) + circom_rows(a, nrows) + submodule_rows(a, lk, fps))
-    curate(rows, a)
+    for r in rows:
+        r["cat"] = "first-party" if r["source"].startswith("first-party") else classify(r["licence"])
 
     os.makedirs(a.out, exist_ok=True)
     with open(a.csv, "w", newline="") as f:
         w = csv.writer(f)
         w.writerow(COLUMNS)
-        w.writerows([r["eco"], r["name"], r["version"], r["licence"], r["source"], r["scope"], r["direct"], r["cat"], r["ships"], r["note"]] for r in rows)
+        w.writerows([r["eco"], r["name"], r["version"], r["licence"], r["source"], r["scope"], r["direct"], r["cat"]] for r in rows)
     spdx(rows, a, a.out)
     by = {}
     for r in rows:

@@ -13,9 +13,6 @@
       "override": { "profile": "backend", "reason": "Admin panel behind the VPN, never served to users." } }
   ],
   "ignore": ["**/fixtures/**"],
-  "curations": [
-    { "ecosystem": "cargo", "name": "ring", "licence": "ISC AND MIT AND OpenSSL", "evidence": "LICENSE file in the crates.io tarball, 0.17.8." }
-  ],
   "branch_rules": { "protected": ["main", "staging"], "approvals": 2 },
   "exceptions": [
     { "id": "snarkjs", "package": "snarkjs", "rule": "gpl",
