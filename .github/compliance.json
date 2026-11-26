@@ -1,0 +1,5 @@
+{
+  "$comment": "CI tooling: nothing here ships. tests/fixture-monorepo is test data, not a real project.",
+  "version": 1,
+  "kind": "tooling"
+}

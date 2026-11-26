@@ -1,0 +1,7 @@
+# Keeps the pinned actions in this repo up to date.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directories: ["/", "/.github/actions/setup"]
+    schedule:
+      interval: weekly

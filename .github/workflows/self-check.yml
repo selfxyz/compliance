@@ -1,0 +1,20 @@
+# This repo runs its own compliance workflow on itself.
+name: self-check
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "17 5 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  vulnerability-alerts: read
+
+jobs:
+  compliance:
+    uses: ./.github/workflows/compliance.yml
+    with:
+      full: ${{ github.event_name == 'workflow_dispatch' }}
