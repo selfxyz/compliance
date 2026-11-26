@@ -1,0 +1,26 @@
+lockfileVersion: '9.0'
+importers:
+  .: {}
+  apps/mobile:
+    dependencies:
+      react:
+        specifier: ^18.3.1
+        version: 18.3.1
+  apps/web:
+    dependencies:
+      react:
+        specifier: ^18.3.1
+        version: 18.3.1
+  packages/sdk:
+    dependencies:
+      some-gpl-lib:
+        specifier: ^1.0.0
+        version: 1.0.0
+packages:
+  react@18.3.1:
+    resolution: {integrity: sha512-x}
+  some-gpl-lib@1.0.0:
+    resolution: {integrity: sha512-y}
+snapshots:
+  react@18.3.1: {}
+  some-gpl-lib@1.0.0: {}

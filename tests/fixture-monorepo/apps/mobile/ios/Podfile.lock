@@ -1,0 +1,11 @@
+PODS:
+  - OpenSSL-Universal (1.1.2200)
+
+DEPENDENCIES:
+  - OpenSSL-Universal
+
+SPEC REPOS:
+  trunk:
+    - OpenSSL-Universal
+
+COCOAPODS: 1.15.2

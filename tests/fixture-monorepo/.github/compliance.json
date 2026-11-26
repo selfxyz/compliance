@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "mode": "report",
+  "workspaces": [
+    {
+      "path": "apps/mobile",
+      "kind": [
+        "ios-app",
+        "android-app"
+      ]
+    },
+    {
+      "path": "apps/web",
+      "kind": "web-app"
+    },
+    {
+      "path": "packages/sdk",
+      "kind": "npm-package"
+    },
+    {
+      "path": "services/api",
+      "kind": "service"
+    },
+    {
+      "path": "contracts",
+      "kind": "contracts"
+    },
+    {
+      "path": "examples",
+      "kind": "example"
+    }
+  ],
+  "ignore": [
+    "**/fixtures/**"
+  ]
+}
