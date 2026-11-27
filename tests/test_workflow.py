@@ -36,7 +36,8 @@ def test_third_party_actions_are_pinned_to_a_commit():
     uses = [u for text in TEXT.values() for u in re.findall(r"^\s*(?:- )?uses:\s*(\S+)", text, re.M)]
     own = [u for u in uses if u.startswith("selfxyz/compliance/")]
     assert own == ["selfxyz/compliance/.github/workflows/compliance.yml@v1"], own   # the template; the workflow itself has none
-    assert WF["env"]["COMPLIANCE_REF"] == "v1" and TEXT[".github/workflows/compliance.yml"].count("repository: selfxyz/compliance") == 3
+    text = TEXT[".github/workflows/compliance.yml"]   # the scripts come from the commit the workflow was called at, never a tag
+    assert text.count('repository: "${{ job.workflow_repository }}", ref: "${{ job.workflow_sha }}"') == 3 and "COMPLIANCE_REF" not in text
     bad = [u for u in uses if u not in own and not u.startswith("./") and not re.search(r"@[0-9a-f]{40}$", u)]
     assert not bad, bad
 

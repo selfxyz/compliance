@@ -7,8 +7,8 @@
 #   gate      the required check: "compliance / gate"
 #
 # The gate fails on a plan error in any mode, and on findings only in block mode.
-# The scripts come from this repo at COMPLIANCE_REF, fetched with a plain checkout. Every `uses:`
-# below is pinned to a commit, so repos that only allow commit-pinned actions can call this.
+# Each job checks out this repo at the commit this workflow file was called at (job.workflow_sha),
+# so the scripts always match the workflow. A caller pinned to a commit runs only that commit.
 
 name: compliance
 
@@ -21,7 +21,6 @@ on:
         default: false
 
 env:
-  COMPLIANCE_REF: v1   # the tag callers use
   GITLEAKS_VERSION: 8.18.4
   GITLEAKS_SHA256: ba6dbb656933921c775ee5a2d1c13a91046e7952e9d919f9bac4cec61d628e7d   # gitleaks_8.18.4_linux_x64.tar.gz
   HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
@@ -51,7 +50,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with: { fetch-depth: 0, persist-credentials: false }
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with: { repository: selfxyz/compliance, ref: "${{ env.COMPLIANCE_REF }}", path: .compliance, persist-credentials: false }
+        with: { repository: "${{ job.workflow_repository }}", ref: "${{ job.workflow_sha }}", path: .compliance, persist-credentials: false }
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with: { python-version: "3.12" }
       - run: pip install --quiet pyyaml==6.0.2 jsonschema==4.23.0
@@ -77,7 +76,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with: { fetch-depth: 0, persist-credentials: false }
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with: { repository: selfxyz/compliance, ref: "${{ env.COMPLIANCE_REF }}", path: .compliance, persist-credentials: false }
+        with: { repository: "${{ job.workflow_repository }}", ref: "${{ job.workflow_sha }}", path: .compliance, persist-credentials: false }
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with: { python-version: "3.12" }
       - run: pip install --quiet pyyaml==6.0.2 jsonschema==4.23.0
@@ -142,7 +141,7 @@ jobs:
       vulnerability-alerts: read   # listing Dependabot alerts only works when they are on
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with: { repository: selfxyz/compliance, ref: "${{ env.COMPLIANCE_REF }}", path: .compliance, persist-credentials: false }
+        with: { repository: "${{ job.workflow_repository }}", ref: "${{ job.workflow_sha }}", path: .compliance, persist-credentials: false }
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with: { python-version: "3.12" }
       - run: pip install --quiet pyyaml==6.0.2 jsonschema==4.23.0
