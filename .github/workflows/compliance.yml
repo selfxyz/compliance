@@ -9,6 +9,7 @@
 # The gate fails on a plan error in any mode, and on findings only in block mode.
 # Each job checks out this repo at the commit this workflow file was called at (job.workflow_sha),
 # so the scripts always match the workflow. A caller pinned to a commit runs only that commit.
+# The calling repo goes in target/ and these scripts in .compliance/, so the two never overlap.
 
 name: compliance
 
@@ -48,7 +49,7 @@ jobs:
           REPO: ${{ github.repository }}
         run: gh api "repos/$REPO" --jq '"visibility=\(.visibility)\ndefault_branch=\(.default_branch)"' >> "$GITHUB_OUTPUT"
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with: { fetch-depth: 0, persist-credentials: false }
+        with: { path: target, fetch-depth: 0, persist-credentials: false }
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with: { repository: "${{ job.workflow_repository }}", ref: "${{ job.workflow_sha }}", path: .compliance, persist-credentials: false }
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
@@ -56,8 +57,8 @@ jobs:
       - run: pip install --quiet pyyaml==6.0.2 jsonschema==4.23.0
       - id: plan
         run: |
-          git checkout --quiet --detach "$HEAD"   # the commit that gets scanned, not the PR merge commit
-          args=(--repo . --head "$HEAD" --out "$RUNNER_TEMP/plan.json")
+          git -C target checkout --quiet --detach "$HEAD"   # the commit that gets scanned, not the PR merge commit
+          args=(--repo target --head "$HEAD" --out "$RUNNER_TEMP/plan.json")
           if [ "$FULL" = true ]; then args+=(--full); else args+=(--base "$BASE"); fi
           python3 .compliance/bin/plan.py "${args[@]}"
 
@@ -74,7 +75,7 @@ jobs:
         ws: ${{ fromJSON(needs.plan.outputs.matrix) }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with: { fetch-depth: 0, persist-credentials: false }
+        with: { path: target, fetch-depth: 0, persist-credentials: false }
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with: { repository: "${{ job.workflow_repository }}", ref: "${{ job.workflow_sha }}", path: .compliance, persist-credentials: false }
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
@@ -96,8 +97,8 @@ jobs:
           MODE: ${{ needs.plan.outputs.mode }}
           FILE_CHECKS: ${{ matrix.ws.file_checks }}
         run: |
-          git checkout --quiet --detach "$HEAD"
-          bash .compliance/bin/licences.sh . "$RUNNER_TEMP/scan"
+          git -C target checkout --quiet --detach "$HEAD"
+          bash .compliance/bin/licences.sh target "$RUNNER_TEMP/scan"
       - if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:   # findings.json, deps.csv and the SBOM: the record of this run
