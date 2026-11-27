@@ -90,6 +90,7 @@ Reasons are required, 20 characters or more. The job summary lists every overrid
 | `could not read Dependabot alerts` | The caller workflow is missing `vulnerability-alerts: read`. Copy the template again. |
 | `classic branch protection is on, but its settings are not readable` | Move the rule to a ruleset. |
 | The gate is red but every check passed | A job was cancelled. Re-run it. |
+| The repo only allows actions pinned to a commit | In the caller, replace `@v1` with the commit `v1` points at: `gh api repos/selfxyz/compliance/commits/v1 --jq .sha`. |
 
 To see the plan for a repo without pushing: `python3 bin/plan.py --repo <path> --full`.
 

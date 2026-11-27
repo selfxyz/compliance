@@ -7,7 +7,7 @@ from helpers import ROOT, main
 
 WF = yaml.safe_load(open(os.path.join(ROOT, ".github", "workflows", "compliance.yml")))
 TEXT = {f: open(os.path.join(ROOT, f)).read() for f in (".github/workflows/compliance.yml", ".github/workflows/test.yml", ".github/workflows/self-check.yml",
-                                                        ".github/actions/setup/action.yml", "template/.github/workflows/compliance.yml")}
+                                                        "template/.github/workflows/compliance.yml")}
 
 
 def gate(mode, **results):
@@ -35,7 +35,8 @@ def test_gate_waits_for_every_job():
 def test_third_party_actions_are_pinned_to_a_commit():
     uses = [u for text in TEXT.values() for u in re.findall(r"^\s*(?:- )?uses:\s*(\S+)", text, re.M)]
     own = [u for u in uses if u.startswith("selfxyz/compliance/")]
-    assert len(own) == 4 and all(u.endswith("@v1") for u in own), own   # 3 in the workflow, 1 in the template
+    assert own == ["selfxyz/compliance/.github/workflows/compliance.yml@v1"], own   # the template; the workflow itself has none
+    assert WF["env"]["COMPLIANCE_REF"] == "v1" and TEXT[".github/workflows/compliance.yml"].count("repository: selfxyz/compliance") == 3
     bad = [u for u in uses if u not in own and not u.startswith("./") and not re.search(r"@[0-9a-f]{40}$", u)]
     assert not bad, bad
 
