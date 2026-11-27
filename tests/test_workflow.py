@@ -7,7 +7,7 @@ from helpers import ROOT, main
 
 WF = yaml.safe_load(open(os.path.join(ROOT, ".github", "workflows", "compliance.yml")))
 TEXT = {f: open(os.path.join(ROOT, f)).read() for f in (".github/workflows/compliance.yml", ".github/workflows/test.yml", ".github/workflows/self-check.yml",
-                                                        ".github/actions/setup/action.yml", "template/.github/workflows/compliance.yml")}
+                                                        "template/.github/workflows/compliance.yml")}
 
 
 def gate(mode, **results):
@@ -35,7 +35,12 @@ def test_gate_waits_for_every_job():
 def test_third_party_actions_are_pinned_to_a_commit():
     uses = [u for text in TEXT.values() for u in re.findall(r"^\s*(?:- )?uses:\s*(\S+)", text, re.M)]
     own = [u for u in uses if u.startswith("selfxyz/compliance/")]
-    assert len(own) == 4 and all(u.endswith("@v1") for u in own), own   # 3 in the workflow, 1 in the template
+    assert own == ["selfxyz/compliance/.github/workflows/compliance.yml@v1"], own   # the template; the workflow itself has none
+    text = TEXT[".github/workflows/compliance.yml"]   # the scripts come from the commit the workflow was called at, never a tag
+    assert text.count('repository: "${{ job.workflow_repository }}", ref: "${{ job.workflow_sha }}"') == 3 and "COMPLIANCE_REF" not in text
+    for job in ("plan", "licences"):   # the calling repo and the scripts are checked out side by side, never one inside the other
+        paths = [s["with"]["path"] for s in WF["jobs"][job]["steps"] if "actions/checkout" in s.get("uses", "")]
+        assert paths == ["target", ".compliance"], (job, paths)
     bad = [u for u in uses if u not in own and not u.startswith("./") and not re.search(r"@[0-9a-f]{40}$", u)]
     assert not bad, bad
 

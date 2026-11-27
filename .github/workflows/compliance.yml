@@ -7,7 +7,9 @@
 #   gate      the required check: "compliance / gate"
 #
 # The gate fails on a plan error in any mode, and on findings only in block mode.
-# Releasing: callers use @v1, and so do the `uses: selfxyz/compliance/...@v1` lines below.
+# Each job checks out this repo at the commit this workflow file was called at (job.workflow_sha),
+# so the scripts always match the workflow. A caller pinned to a commit runs only that commit.
+# The calling repo goes in target/ and these scripts in .compliance/, so the two never overlap.
 
 name: compliance
 
@@ -47,14 +49,18 @@ jobs:
           REPO: ${{ github.repository }}
         run: gh api "repos/$REPO" --jq '"visibility=\(.visibility)\ndefault_branch=\(.default_branch)"' >> "$GITHUB_OUTPUT"
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with: { fetch-depth: 0, persist-credentials: false }
-      - uses: selfxyz/compliance/.github/actions/setup@v1
+        with: { path: target, fetch-depth: 0, persist-credentials: false }
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with: { repository: "${{ job.workflow_repository }}", ref: "${{ job.workflow_sha }}", path: .compliance, persist-credentials: false }
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with: { python-version: "3.12" }
+      - run: pip install --quiet pyyaml==6.0.2 jsonschema==4.23.0
       - id: plan
         run: |
-          git checkout --quiet --detach "$HEAD"   # the commit that gets scanned, not the PR merge commit
-          args=(--repo . --head "$HEAD" --out "$RUNNER_TEMP/plan.json")
+          git -C target checkout --quiet --detach "$HEAD"   # the commit that gets scanned, not the PR merge commit
+          args=(--repo target --head "$HEAD" --out "$RUNNER_TEMP/plan.json")
           if [ "$FULL" = true ]; then args+=(--full); else args+=(--base "$BASE"); fi
-          python3 "$COMPLIANCE_ROOT/bin/plan.py" "${args[@]}"
+          python3 .compliance/bin/plan.py "${args[@]}"
 
   licences:
     name: licences (${{ matrix.ws.name }})
@@ -69,8 +75,12 @@ jobs:
         ws: ${{ fromJSON(needs.plan.outputs.matrix) }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with: { fetch-depth: 0, persist-credentials: false }
-      - uses: selfxyz/compliance/.github/actions/setup@v1
+        with: { path: target, fetch-depth: 0, persist-credentials: false }
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with: { repository: "${{ job.workflow_repository }}", ref: "${{ job.workflow_sha }}", path: .compliance, persist-credentials: false }
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with: { python-version: "3.12" }
+      - run: pip install --quiet pyyaml==6.0.2 jsonschema==4.23.0
       - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:   # licence lookups, so most runs make few requests
           path: ~/.cache/oss-scan
@@ -87,8 +97,8 @@ jobs:
           MODE: ${{ needs.plan.outputs.mode }}
           FILE_CHECKS: ${{ matrix.ws.file_checks }}
         run: |
-          git checkout --quiet --detach "$HEAD"
-          bash "$COMPLIANCE_ROOT/bin/licences.sh" . "$RUNNER_TEMP/scan"
+          git -C target checkout --quiet --detach "$HEAD"
+          bash .compliance/bin/licences.sh target "$RUNNER_TEMP/scan"
       - if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:   # findings.json, deps.csv and the SBOM: the record of this run
@@ -131,14 +141,18 @@ jobs:
       contents: read
       vulnerability-alerts: read   # listing Dependabot alerts only works when they are on
     steps:
-      - uses: selfxyz/compliance/.github/actions/setup@v1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with: { repository: "${{ job.workflow_repository }}", ref: "${{ job.workflow_sha }}", path: .compliance, persist-credentials: false }
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with: { python-version: "3.12" }
+      - run: pip install --quiet pyyaml==6.0.2 jsonschema==4.23.0
       - env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
           DEFAULT_BRANCH: ${{ needs.plan.outputs.default_branch }}
           RULES: ${{ needs.plan.outputs.branch_rules }}
           MODE: ${{ needs.plan.outputs.mode }}
-        run: python3 "$COMPLIANCE_ROOT/bin/settings.py"
+        run: python3 .compliance/bin/settings.py
 
   gate:
     name: gate
